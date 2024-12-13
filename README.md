@@ -6,4 +6,4 @@ Very simple program keeping it as efficient as possible and not being too resour
 
 I've also included code and images in case you are looking for a specific max stat, currently it will stop when any stat at 13 is detected.
 
-![image](https://github.com/user-attachments/assets/fc24d9da-379a-4eab-924c-df302806d56b)
+![image](https://github.com/user-attachments/assets/368dca7e-9d84-4651-8e14-cccd6265ce79)
