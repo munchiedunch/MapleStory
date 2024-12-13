@@ -67,7 +67,7 @@ def main():
     flat_image = "flat13.png"
     dice_image = "dice.png"
 
-    flat_confidence = 0.8
+    flat_confidence = 0.9
     dice_confidence = 0.3
 
     # Loop until stat is found 
