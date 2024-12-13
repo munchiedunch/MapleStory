@@ -1,6 +1,6 @@
 MapleStory Automatic 13-Stat Dice Roller
 
-This Python program will use image-recognition to continuosly roll a dice until max stat (13 in our case) is rolled.
+This Python program will use image-recognition to continuously roll a dice until max stat (13 in our case) is rolled.
 
 Very simple program keeping it as efficient as possible and not being too resource intensive, for a more advanced version - feel free to contact me.
 
