@@ -1,96 +1,87 @@
-import pyautogui
-import time
-import os
 import cv2
+import pytesseract
+import pyautogui
 import numpy as np
+import time
 
-def find_image(image_name, confidence=0.8):
-    # Image(s) must be in a subfolder named images
-    image_path = os.path.join("images", image_name)
-    
-    # Check if image file exists
-    if not os.path.exists(image_path):
-        print(f"Error: Image {image_name} not found in the 'images' folder! (Path: {image_path})")
-        return None
+# Configure Tesseract (make sure Tesseract is installed on your system)
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"  # Adjust for your system
 
-    # Capture screen
+def find_and_click_dice(template_path="roll.png"):
+    """
+    Detects the red dice button on the screen and clicks it.
+    """
+    # Take a screenshot of the current screen
     screenshot = pyautogui.screenshot()
-    screenshot = np.array(screenshot)
-    # Convert to BGR to use OpenCV
+    screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
-    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
-    
-    # Load the image
-    template = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
-    # Check if image is accepted
-    if template is None:
-        print(f"Error: Unable to load the template image {image_name}.")
-        return None
-    
-    # Convert to gray for matching
-    gray_screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
-    
-    # Match images
-    result = cv2.matchTemplate(gray_screenshot, template, cv2.TM_CCOEFF_NORMED)
-    
-    # Check and calculate match
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    # Load the dice template
+    template = cv2.imread(template_path, cv2.IMREAD_UNCHANGED)
 
-    # Check match quality value for debugging purposes
-    #print(f"Max value from match for {image_name}: {max_val}")
-    
-    if max_val >= confidence:
-        top_left = max_loc
-        h, w = template.shape
-        center = (top_left[0] + w // 2, top_left[1] + h // 2)
-        return center
-    
-    return None
+    # Convert both images to grayscale
+    screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
-def click_on_image(image_name, confidence=0.3):
-    # Search for image and click on it, for the dice specifically
-    image_location = find_image(image_name, confidence)
-    
-    if image_location:
-        # Print if image is found, for debugging
-        #print(f"Found {image_name} at {image_location}")
+    # Match template
+    result = cv2.matchTemplate(screen_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, max_loc = cv2.minMaxLoc(result)
 
-        # Click dice
-        pyautogui.click(image_location)
+    # Threshold for detection
+    if max_val > 0.8:
+        w, h = template_gray.shape[::-1]
+        dice_center = (max_loc[0] + w // 2, max_loc[1] + h // 2)
+        pyautogui.click(dice_center)  # Click on the detected location
+        print(f"Clicked red dice at {dice_center}")
         return True
-    else:
-        print(f"Could not find {image_name}.")
+    print("Red dice not found on the screen.")
     return False
 
-def main():
-    flat_image = "flat13.png"
-    dice_image = "dice.png"
 
-    flat_confidence = 0.9
-    dice_confidence = 0.3
+def is_int_13(region):
+    """
+    Checks if the screenshot of the specified region contains 'INT 13'.
+    """
+    # Take a screenshot of the specific region
+    screenshot = pyautogui.screenshot(region=(1200,500, 1400, 800))
+    screenshot.save("debug_int_region.png")  # Save for debugging purposes
+    image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
-    # Loop until stat is found 
+    # Perform OCR to extract text
+    text = pytesseract.image_to_string(image, config='--psm 6')  # Use page segmentation mode 6 for uniform blocks
+    print(f"OCR Text: {text.strip()}")  # Log the extracted text for debugging
+    text = text.upper()
+    print(text)
+    # Check if 'INT 13' is in the extracted text
+    return "INT 13" in text
+
+
+def auto_click_until_int(template_path="red_dice_template.png", int_region=(0, 100, 0, 100)):
+    """
+    Main loop to click the dice until the text 'INT 13' appears in the specified region.
+    """
+    # Save initial region preview for debugging
+    screenshot = pyautogui.screenshot()
+    screenshot.save("int_region_preview.png")
+    print("INT region preview saved as 'int_region_preview.png'. Verify this file for accuracy.")
+
     while True:
-        print(f"Searching for {flat_image}...")
-        flat_location = find_image(flat_image, confidence=flat_confidence)
-        
-        if flat_location:
-            print(f"Found the {flat_image}!")
+        # Check if 'INT 13' is present
+        if is_int_13(int_region):
+            print("Found 'INT 13'! Stopping.")
             break
-        
-        #print(f"{flat_image} not found, re-rolling...")
-        # If stat isn't found, roll the dice
-        dice_clicked = click_on_image(dice_image, confidence=dice_confidence)
-        
-        if dice_clicked:
-            print(f"Clicked on dice to re-roll...")
 
-            # If dice is rolling too fast, uncomment the line below
-            #time.sleep(1)
-        else:
-            print("Dice image not found, something went wrong")
+        # Click the dice
+        clicked = find_and_click_dice(template_path)
+        if not clicked:
+            print("Red dice not found! Stopping the script.")
             break
+
+        # Small delay to avoid spamming
+        time.sleep(0.5)
+
 
 if __name__ == "__main__":
-    main()
+    # Provide the path to your red dice template and the region where the INT is displayed
+    red_dice_template_path = "roll.png"  # Prepare this template in advance
+    int_screen_region = (1556, 408, 121, 42)  # Adjusted region based on your screen resolution
+    auto_click_until_int(template_path=red_dice_template_path, int_region=int_screen_region)
